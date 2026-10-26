@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const usersRouter = require("./routes/users.routes");
+const postsRouter = require("./routes/posts.routes");
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/users", usersRouter);
+app.use("/posts", postsRouter);
 
 const PORT = 3000;
 app.listen(PORT, () => {

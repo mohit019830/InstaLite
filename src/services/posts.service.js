@@ -6,8 +6,56 @@ const createPost = async (data) => {
   });
 };
 
-const listPosts = async () => {
-  return await prisma.post.findMany();
+const listPosts = async ({ page = 1, limit = 10, sortBy = "createdAt", order = "desc", location, search, from, to } = {}) => {
+  const where = {};
+
+  if (location) {
+    where.location = {
+      equals: location,
+      mode: "insensitive",
+    };
+  }
+
+  if (search) {
+    where.caption = {
+      contains: search,
+      mode: "insensitive",
+    };
+  }
+
+  if (from || to) {
+    where.createdAt = {};
+    if (from) {
+      where.createdAt.gte = from;
+    }
+    if (to) {
+      where.createdAt.lt = to;
+    }
+  }
+
+  const [data, total] = await prisma.$transaction([
+    prisma.post.findMany({
+      where,
+      orderBy: {
+        [sortBy]: order,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.post.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+  };
 };
 
 const getPostById = async (id) => {

@@ -28,8 +28,70 @@ const create = async (req, res) => {
 
 const list = async (req, res) => {
   try {
-    const posts = await postsService.listPosts();
-    res.status(200).json(posts);
+    let page = 1;
+    let limit = 10;
+
+    if (req.query.page !== undefined) {
+      if (!/^[1-9]\d*$/.test(req.query.page)) {
+        return res.status(400).json({ error: "page and limit must be positive integers" });
+      }
+      page = parseInt(req.query.page);
+    }
+
+    if (req.query.limit !== undefined) {
+      if (!/^[1-9]\d*$/.test(req.query.limit)) {
+        return res.status(400).json({ error: "page and limit must be positive integers" });
+      }
+      limit = parseInt(req.query.limit);
+      if (limit > 50) {
+        limit = 50;
+      }
+    }
+
+    const sortBy = req.query.sortBy || "createdAt";
+    const allowedSortBy = ["createdAt", "updatedAt"];
+    if (!allowedSortBy.includes(sortBy)) {
+      return res.status(400).json({ error: "sortBy must be one of: createdAt, updatedAt" });
+    }
+
+    const order = req.query.order || "desc";
+    const allowedOrder = ["asc", "desc"];
+    if (!allowedOrder.includes(order)) {
+      return res.status(400).json({ error: "order must be asc or desc" });
+    }
+
+    let from;
+    if (req.query.from !== undefined) {
+      const fromDate = new Date(req.query.from);
+      if (isNaN(fromDate.getTime())) {
+        return res.status(400).json({ error: "from and to must be valid dates" });
+      }
+      from = fromDate;
+    }
+
+    let to;
+    if (req.query.to !== undefined) {
+      const toDate = new Date(req.query.to);
+      if (isNaN(toDate.getTime())) {
+        return res.status(400).json({ error: "from and to must be valid dates" });
+      }
+      to = toDate;
+    }
+
+    const { location, search } = req.query;
+
+    const result = await postsService.listPosts({
+      page,
+      limit,
+      sortBy,
+      order,
+      location,
+      search,
+      from,
+      to,
+    });
+
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }

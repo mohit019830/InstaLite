@@ -30,8 +30,61 @@ const create = async (req, res) => {
 
 const list = async (req, res) => {
   try {
-    const users = await usersService.listUsers();
-    res.status(200).json(users);
+    let page = 1;
+    let limit = 10;
+
+    if (req.query.page !== undefined) {
+      if (!/^[1-9]\d*$/.test(req.query.page)) {
+        return res.status(400).json({ error: "page and limit must be positive integers" });
+      }
+      page = parseInt(req.query.page);
+    }
+
+    if (req.query.limit !== undefined) {
+      if (!/^[1-9]\d*$/.test(req.query.limit)) {
+        return res.status(400).json({ error: "page and limit must be positive integers" });
+      }
+      limit = parseInt(req.query.limit);
+      if (limit > 50) {
+        limit = 50;
+      }
+    }
+
+    const sortBy = req.query.sortBy || "createdAt";
+    const allowedSortBy = ["createdAt", "username", "fullname"];
+    if (!allowedSortBy.includes(sortBy)) {
+      return res.status(400).json({ error: "sortBy must be one of: createdAt, username, fullname" });
+    }
+
+    const order = req.query.order || "desc";
+    const allowedOrder = ["asc", "desc"];
+    if (!allowedOrder.includes(order)) {
+      return res.status(400).json({ error: "order must be asc or desc" });
+    }
+
+    let isPrivate;
+    if (req.query.isPrivate !== undefined) {
+      if (req.query.isPrivate === "true") {
+        isPrivate = true;
+      } else if (req.query.isPrivate === "false") {
+        isPrivate = false;
+      } else {
+        return res.status(400).json({ error: "isPrivate must be true or false" });
+      }
+    }
+
+    const { search } = req.query;
+
+    const result = await usersService.listUsers({
+      page,
+      limit,
+      sortBy,
+      order,
+      isPrivate,
+      search,
+    });
+
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
   }
